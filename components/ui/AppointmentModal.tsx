@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Phone, Calendar, CheckCircle, Loader2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 
 interface AppointmentModalProps {
   isOpen: boolean;
@@ -10,7 +13,6 @@ interface AppointmentModalProps {
 }
 
 const serviceOptions = [
-  "Hizmet Seçiniz",
   "İmplant Tedavisi",
   "Estetik Diş Hekimliği",
   "Ortodonti",
@@ -24,65 +26,87 @@ const serviceOptions = [
   "Diğer",
 ];
 
+const timeSlots = [
+  "09:00",
+  "10:00",
+  "11:00",
+  "12:00",
+  "13:00",
+  "14:00",
+  "15:00",
+  "16:00",
+  "17:00",
+];
+
+const bookingSchema = z.object({
+  firstName: z.string().min(2, "Ad en az 2 karakter olmalıdır"),
+  lastName: z.string().min(2, "Soyad en az 2 karakter olmalıdır"),
+  phone: z.string().regex(/^[\d\s\-\+\(\)]{10,}$/, "Geçerli bir telefon numarası giriniz"),
+  serviceType: z.string().min(1, "Lütfen bir hizmet seçiniz"),
+  appointmentDate: z.string().min(1, "Lütfen bir tarih seçiniz"),
+  appointmentTime: z.string().min(1, "Lütfen bir saat seçiniz"),
+});
+
+type BookingFormValues = z.infer<typeof bookingSchema>;
+
 export default function AppointmentModal({
   isOpen,
   onClose,
 }: AppointmentModalProps) {
-  const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    service: "Hizmet Seçiniz",
-    message: "",
-  });
-  const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = "Ad soyad zorunludur.";
-    if (!formData.phone.trim()) newErrors.phone = "Telefon numarası zorunludur.";
-    else if (!/^[\d\s\-\+\(\)]{10,}$/.test(formData.phone))
-      newErrors.phone = "Geçerli bir telefon numarası giriniz.";
-    if (formData.service === "Hizmet Seçiniz")
-      newErrors.service = "Lütfen bir hizmet seçiniz.";
-    return newErrors;
-  };
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<BookingFormValues>({
+    resolver: zodResolver(bookingSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      phone: "",
+      serviceType: "",
+      appointmentDate: "",
+      appointmentTime: "",
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const validationErrors = validate();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
+  const onSubmit = async (data: BookingFormValues) => {
+    try {
+      // Send data to our API route
+      const response = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error("Bir hata oluştu");
+      }
+
+      // Track conversion if gtag is present
+      if (typeof window !== "undefined" && (window as any).gtag) {
+        (window as any).gtag("event", "form_submit", {
+          event_category: "appointment",
+        });
+      }
+
+      setIsSuccess(true);
+      reset();
+    } catch (error) {
+      console.error("Booking error:", error);
+      alert("Randevu talebiniz alınırken bir hata oluştu. Lütfen telefon ile iletişime geçiniz.");
     }
-    setErrors({});
-    setIsLoading(true);
-
-    /**
-     * TODO: Backend Integration Point
-     * Replace the setTimeout below with an actual API call, e.g.:
-     * await fetch('/api/appointments', {
-     *   method: 'POST',
-     *   headers: { 'Content-Type': 'application/json' },
-     *   body: JSON.stringify(formData),
-     * });
-     *
-     * Also integrate with Google Ads conversion tracking:
-     * window.gtag('event', 'form_submit', { event_category: 'appointment' });
-     */
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    setIsLoading(false);
-    setIsSuccess(true);
-    setFormData({ name: "", phone: "", service: "Hizmet Seçiniz", message: "" });
   };
 
   const handleClose = () => {
     setIsSuccess(false);
-    setErrors({});
+    reset();
     onClose();
   };
+
+  const today = new Date().toISOString().split("T")[0];
 
   return (
     <AnimatePresence>
@@ -103,10 +127,10 @@ export default function AppointmentModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.93, y: 20 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed inset-x-4 top-[50%] -translate-y-[50%] z-[70] max-w-lg mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden"
+            className="fixed inset-x-4 top-[50%] -translate-y-[50%] z-[70] max-w-lg mx-auto bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
           >
             {/* Header */}
-            <div className="bg-teal-gradient px-6 py-5 relative">
+            <div className="bg-teal-gradient px-6 py-5 relative shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                   <Calendar className="text-white" size={22} />
@@ -130,7 +154,7 @@ export default function AppointmentModal({
             </div>
 
             {/* Body */}
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto">
               {isSuccess ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -156,28 +180,49 @@ export default function AppointmentModal({
                   </a>
                 </motion.div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
-                      Ad Soyad *
-                    </label>
-                    <input
-                      type="text"
-                      id="modal-name"
-                      value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                      placeholder="Adınız ve soyadınız"
-                      className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${
-                        errors.name
-                          ? "border-red-300 bg-red-50"
-                          : "border-slate-200 bg-slate-50 focus:border-teal-500 focus:bg-white"
-                      }`}
-                    />
-                    {errors.name && (
-                      <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-                    )}
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
+                        Ad *
+                      </label>
+                      <input
+                        type="text"
+                        {...register("firstName")}
+                        placeholder="Adınız"
+                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${
+                          errors.firstName
+                            ? "border-red-300 bg-red-50"
+                            : "border-slate-200 bg-slate-50 focus:border-teal-500 focus:bg-white"
+                        }`}
+                      />
+                      {errors.firstName && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors.firstName.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
+                        Soyad *
+                      </label>
+                      <input
+                        type="text"
+                        {...register("lastName")}
+                        placeholder="Soyadınız"
+                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${
+                          errors.lastName
+                            ? "border-red-300 bg-red-50"
+                            : "border-slate-200 bg-slate-50 focus:border-teal-500 focus:bg-white"
+                        }`}
+                      />
+                      {errors.lastName && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors.lastName.message}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div>
@@ -186,11 +231,7 @@ export default function AppointmentModal({
                     </label>
                     <input
                       type="tel"
-                      id="modal-phone"
-                      value={formData.phone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, phone: e.target.value })
-                      }
+                      {...register("phone")}
                       placeholder="0532 123 45 67"
                       className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${
                         errors.phone
@@ -199,60 +240,93 @@ export default function AppointmentModal({
                       }`}
                     />
                     {errors.phone && (
-                      <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+                      <p className="text-red-500 text-xs mt-1">
+                        {errors.phone.message}
+                      </p>
                     )}
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
-                      Hizmet *
+                      İşlem Türü *
                     </label>
                     <select
-                      id="modal-service"
-                      value={formData.service}
-                      onChange={(e) =>
-                        setFormData({ ...formData, service: e.target.value })
-                      }
+                      {...register("serviceType")}
                       className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all appearance-none ${
-                        errors.service
+                        errors.serviceType
                           ? "border-red-300 bg-red-50"
                           : "border-slate-200 bg-slate-50 focus:border-teal-500 focus:bg-white"
                       }`}
                     >
+                      <option value="">Seçiniz...</option>
                       {serviceOptions.map((opt) => (
                         <option key={opt} value={opt}>
                           {opt}
                         </option>
                       ))}
                     </select>
-                    {errors.service && (
-                      <p className="text-red-500 text-xs mt-1">{errors.service}</p>
+                    {errors.serviceType && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {errors.serviceType.message}
+                      </p>
                     )}
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
-                      Mesajınız (İsteğe bağlı)
-                    </label>
-                    <textarea
-                      id="modal-message"
-                      rows={3}
-                      value={formData.message}
-                      onChange={(e) =>
-                        setFormData({ ...formData, message: e.target.value })
-                      }
-                      placeholder="Tedaviniz hakkında kısa bilgi verebilirsiniz..."
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:border-teal-500 focus:bg-white text-sm outline-none transition-all resize-none"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
+                        Tarih *
+                      </label>
+                      <input
+                        type="date"
+                        min={today}
+                        {...register("appointmentDate")}
+                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${
+                          errors.appointmentDate
+                            ? "border-red-300 bg-red-50"
+                            : "border-slate-200 bg-slate-50 focus:border-teal-500 focus:bg-white"
+                        }`}
+                      />
+                      {errors.appointmentDate && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors.appointmentDate.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
+                        Saat *
+                      </label>
+                      <select
+                        {...register("appointmentTime")}
+                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all appearance-none ${
+                          errors.appointmentTime
+                            ? "border-red-300 bg-red-50"
+                            : "border-slate-200 bg-slate-50 focus:border-teal-500 focus:bg-white"
+                        }`}
+                      >
+                        <option value="">Seçiniz...</option>
+                        {timeSlots.map((time) => (
+                          <option key={time} value={time}>
+                            {time}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.appointmentTime && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors.appointmentTime.message}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <button
                     type="submit"
-                    disabled={isLoading}
-                    id="modal-submit-btn"
-                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-70 text-white font-semibold rounded-xl transition-all text-sm"
+                    disabled={isSubmitting}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-70 text-white font-semibold rounded-xl transition-all text-sm mt-4"
                   >
-                    {isLoading ? (
+                    {isSubmitting ? (
                       <>
                         <Loader2 size={18} className="animate-spin" />
                         Gönderiliyor...
@@ -265,7 +339,7 @@ export default function AppointmentModal({
                     )}
                   </button>
 
-                  <p className="text-center text-xs text-slate-400">
+                  <p className="text-center text-xs text-slate-400 mt-2">
                     Veya hemen arayın:{" "}
                     <a
                       href="tel:+905011070210"
