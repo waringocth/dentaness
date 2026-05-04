@@ -49,7 +49,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#0d9488" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
-      <body className="font-sans antialiased bg-slate-50 text-slate-700">
+      <body className="font-sans antialiased bg-slate-50 text-slate-700 overflow-x-hidden">
         <Navbar />
         <main id="content">{children}</main>
         <Footer />

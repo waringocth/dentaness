@@ -73,7 +73,7 @@ export default async function ServicePage({ params }: Props) {
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             {/* Main Content */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 order-2 lg:order-1">
               <div className="relative rounded-2xl overflow-hidden aspect-video mb-8 shadow-lg">
                 <Image
                   src={service.imageUrl}
@@ -143,7 +143,7 @@ export default async function ServicePage({ params }: Props) {
             </div>
 
             {/* Sidebar CTA */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 order-1 lg:order-2">
               <div className="sticky top-24 space-y-4">
                 {/* Main CTA Card */}
                 <div className="bg-teal-gradient rounded-2xl p-6 text-white">

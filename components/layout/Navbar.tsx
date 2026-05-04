@@ -26,7 +26,6 @@ const services = [
 ];
 
 const navLinks = [
-  { name: "Anasayfa", href: "/" },
   { name: "Hakkımızda", href: "/hakkimizda" },
   { name: "Doktorlarımız", href: "/doktorlarimiz" },
 ];
@@ -97,12 +96,12 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-4 lg:gap-5">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   pathname === link.href
                     ? "text-teal-700 bg-teal-50"
                     : "text-slate-600 hover:text-teal-700 hover:bg-slate-50"
@@ -119,7 +118,7 @@ export default function Navbar() {
               onMouseLeave={() => setServicesOpen(false)}
             >
               <button
-                className={`flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1 whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   pathname.startsWith("/hizmetler")
                     ? "text-teal-700 bg-teal-50"
                     : "text-slate-600 hover:text-teal-700 hover:bg-slate-50"
@@ -166,7 +165,7 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   pathname === link.href
                     ? "text-teal-700 bg-teal-50"
                     : "text-slate-600 hover:text-teal-700 hover:bg-slate-50"
@@ -178,10 +177,10 @@ export default function Navbar() {
           </nav>
 
           {/* CTA Buttons */}
-          <div className="hidden lg:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-4">
             <a
               href="tel:+905011070210"
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-teal-700 border-2 border-teal-200 rounded-lg hover:border-teal-600 hover:bg-teal-50 transition-all"
+              className="flex items-center gap-2 whitespace-nowrap px-4 py-2 text-sm font-semibold text-teal-700 border-2 border-teal-200 rounded-lg hover:border-teal-600 hover:bg-teal-50 transition-all"
             >
               <Phone size={16} />
               (0501) 107 02 10
@@ -189,7 +188,7 @@ export default function Navbar() {
             <button
               onClick={() => setModalOpen(true)}
               id="navbar-randevu-btn"
-              className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-all shadow-sm hover:shadow-md"
+              className="flex items-center gap-2 whitespace-nowrap px-5 py-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-all shadow-sm hover:shadow-md"
             >
               <Calendar size={16} />
               Hemen Randevu Al
