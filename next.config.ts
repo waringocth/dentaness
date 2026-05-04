@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  generateBuildId: async () => {
+    // Force cache invalidation on Vercel deployment
+    return `build-${Date.now()}`;
+  },
 };
 
 export default nextConfig;

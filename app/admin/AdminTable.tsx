@@ -7,11 +7,15 @@ import useSWR from "swr";
 
 interface AdminTableProps {
   initialAppointments: Appointment[];
+  dbError?: boolean;
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = (url: string) => fetch(url).then((res) => res.json()).then(data => {
+  if (data.success === false) throw new Error(data.message);
+  return data.appointments || [];
+});
 
-export default function AdminTable({ initialAppointments }: AdminTableProps) {
+export default function AdminTable({ initialAppointments, dbError = false }: AdminTableProps) {
   const { data: appointments = initialAppointments, mutate } = useSWR<Appointment[]>(
     "/api/appointments",
     fetcher,
@@ -119,6 +123,13 @@ export default function AdminTable({ initialAppointments }: AdminTableProps) {
           {notificationsEnabled ? "Bildirimler Açık" : "🔔 Tarayıcı Bildirimlerine İzin Ver"}
         </button>
       </div>
+
+      {dbError && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-medium flex items-center gap-2">
+          <X size={18} />
+          Veritabanı bağlantısı kurulamadı. Lütfen daha sonra tekrar deneyin veya sistem yöneticisiyle iletişime geçin.
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">

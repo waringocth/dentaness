@@ -5,9 +5,17 @@ import { LogOut } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  const appointments = await prisma.appointment.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+  let appointments = [];
+  let dbError = false;
+
+  try {
+    appointments = await prisma.appointment.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error) {
+    console.error("Failed to fetch appointments:", error);
+    dbError = true;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -27,7 +35,7 @@ export default async function AdminDashboard() {
       </header>
       
       <main className="max-w-7xl mx-auto p-8">
-        <AdminTable initialAppointments={appointments} />
+        <AdminTable initialAppointments={appointments} dbError={dbError} />
       </main>
     </div>
   );
