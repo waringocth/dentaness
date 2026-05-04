@@ -9,7 +9,6 @@ const bookingSchema = z.object({
   serviceType: z.string().min(1),
   appointmentDate: z.string().min(1),
   appointmentTime: z.string().min(1),
-  notes: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -26,7 +25,6 @@ export async function POST(req: Request) {
         appointmentDate: data.appointmentDate,
         appointmentTime: data.appointmentTime,
         status: "PENDING",
-        notes: data.notes,
       },
     });
 

@@ -23,7 +23,7 @@ function NoteCell({ appointmentId, initialNote }: { appointmentId: string, initi
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/appointments/${appointmentId}/note`, {
+      const res = await fetch(`/api/appointments/${appointmentId}/notes`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notes: note }),
