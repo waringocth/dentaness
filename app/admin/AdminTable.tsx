@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { Appointment } from "@prisma/client";
-import { Check, X, Loader2, Bell, BellOff, Edit2, Save } from "lucide-react";
+import { Check, X, Loader2, Bell, BellOff, Edit2, Save, Trash2, Download, MessageCircle, Search } from "lucide-react";
 import useSWR from "swr";
 
 interface AdminTableProps {
@@ -88,8 +88,73 @@ export default function AdminTable({ initialAppointments, dbError = false }: Adm
 
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const prevCountRef = useRef(initialAppointments.length);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // CRM İstatistikleri
+  const stats = {
+    total: appointments.length,
+    today: appointments.filter(a => {
+      const todayStr = new Date().toISOString().split('T')[0];
+      return new Date(a.createdAt).toISOString().includes(todayStr);
+    }).length,
+    approved: appointments.filter(a => a.status === "APPROVED").length,
+    pending: appointments.filter(a => a.status === "PENDING").length,
+  };
+
+  // Arama filtresi
+  const filteredAppointments = appointments.filter(a => 
+    `${a.firstName} ${a.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    a.phone.includes(searchTerm)
+  );
+
+  const exportToCSV = () => {
+    const headers = ["İsim", "Soyisim", "Telefon", "İşlem", "Tarih", "Saat", "Durum", "Notlar", "Kayıt"];
+    const rows = filteredAppointments.map(a => [
+      a.firstName,
+      a.lastName,
+      a.phone,
+      a.serviceType,
+      a.appointmentDate,
+      a.appointmentTime,
+      a.status,
+      a.notes || "",
+      new Date(a.createdAt).toLocaleString("tr-TR")
+    ]);
+
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `randevular_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Bu randevuyu silmek istediğinize emin misiniz?")) return;
+    
+    setLoadingId(id);
+    try {
+      const res = await fetch(`/api/appointments/${id}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        mutate();
+      } else {
+        alert("Randevu silinirken bir hata oluştu.");
+      }
+    } catch (error) {
+      alert("Bağlantı hatası.");
+    } finally {
+      setLoadingId(null);
+    }
+  };
 
   useEffect(() => {
     audioRef.current = new Audio("/sounds/notification.mp3");
@@ -176,29 +241,70 @@ export default function AdminTable({ initialAppointments, dbError = false }: Adm
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "APPROVED":
-        return <span className="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Onaylandı</span>;
+        return <span className="px-2.5 py-1 bg-green-500 text-white rounded-full text-xs font-bold shadow-sm">Onaylandı</span>;
       case "CANCELLED":
-        return <span className="px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">İptal Edildi</span>;
+        return <span className="px-2.5 py-1 bg-red-600 text-white rounded-full text-xs font-bold shadow-sm">İptal Edildi</span>;
       default:
         return <span className="px-2.5 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">Bekliyor</span>;
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={requestPermissions}
-          disabled={notificationsEnabled}
-          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-            notificationsEnabled 
-              ? "bg-teal-100 text-teal-700 opacity-80 cursor-default" 
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-          }`}
-        >
-          {notificationsEnabled ? <Bell size={18} /> : <BellOff size={18} />}
-          {notificationsEnabled ? "Bildirimler Açık" : "🔔 Tarayıcı Bildirimlerine İzin Ver"}
-        </button>
+    <div className="space-y-6">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+          <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Bugün Toplam</p>
+          <p className="text-2xl font-bold text-slate-800">{stats.today}</p>
+        </div>
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-green-500">
+          <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Onaylananlar</p>
+          <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
+        </div>
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-yellow-400">
+          <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Bekleyenler</p>
+          <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+        </div>
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+          <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Toplam Kayıt</p>
+          <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
+        <div className="relative w-full md:w-96">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <input
+            type="text"
+            placeholder="İsim veya telefon ile ara..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-teal-500 outline-none transition-all shadow-sm"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <button
+            onClick={exportToCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 text-sm font-semibold rounded-xl border border-slate-200 hover:bg-slate-50 transition-all shadow-sm"
+          >
+            <Download size={18} />
+            Excel'e Aktar (CSV)
+          </button>
+          
+          <button
+            onClick={requestPermissions}
+            disabled={notificationsEnabled}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl transition-all shadow-sm ${
+              notificationsEnabled 
+                ? "bg-teal-50 text-teal-700 opacity-80 cursor-default" 
+                : "bg-teal-600 text-white hover:bg-teal-700"
+            }`}
+          >
+            {notificationsEnabled ? <Bell size={18} /> : <BellOff size={18} />}
+            {notificationsEnabled ? "Bildirimler Açık" : "🔔 Sesli Bildirimleri Aç"}
+          </button>
+        </div>
       </div>
 
       {dbError && (
@@ -224,33 +330,57 @@ export default function AdminTable({ initialAppointments, dbError = false }: Adm
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {appointments.length === 0 ? (
+              {filteredAppointments.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
-                    Henüz randevu talebi bulunmuyor.
+                  <td colSpan={8} className="px-6 py-8 text-center text-slate-500">
+                    Kayıt bulunamadı.
                   </td>
                 </tr>
               ) : (
-                appointments.map((appointment) => (
-                  <tr key={appointment.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-slate-800">
+                filteredAppointments.map((appointment) => (
+                  <tr 
+                    key={appointment.id} 
+                    className={`hover:bg-slate-50 transition-colors ${
+                      appointment.status === "PENDING" ? "bg-yellow-50/30" : ""
+                    }`}
+                  >
+                    <td className="px-6 py-4 font-bold text-slate-800">
                       {appointment.firstName} {appointment.lastName}
                     </td>
-                    <td className="px-6 py-4">{appointment.phone}</td>
-                    <td className="px-6 py-4">{appointment.serviceType}</td>
-                    <td className="px-6 py-4 font-medium">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <span>{appointment.phone}</span>
+                        <a
+                          href={`https://wa.me/${appointment.phone.replace(/\s+/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-green-600 hover:text-green-700"
+                          title="WhatsApp'tan Mesaj Gönder"
+                        >
+                          <MessageCircle size={16} />
+                        </a>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 font-semibold text-slate-700">{appointment.serviceType}</td>
+                    <td className="px-6 py-4 font-medium text-slate-900">
                       {appointment.appointmentDate} <br />
-                      <span className="text-slate-400 text-xs">{appointment.appointmentTime}</span>
+                      <span className="text-teal-600 text-xs font-bold">{appointment.appointmentTime}</span>
                     </td>
                     <td className="px-6 py-4">
                       <NoteCell appointmentId={appointment.id} initialNote={appointment.notes} />
                     </td>
-                    <td className="px-6 py-4 text-xs text-slate-500">
-                      {new Date(appointment.createdAt).toLocaleDateString("tr-TR")}
+                    <td className="px-6 py-4 text-xs text-slate-500 font-medium">
+                      {new Date(appointment.createdAt).toLocaleString("tr-TR", {
+                        day: '2.digit',
+                        month: '2.digit',
+                        year: 'numeric',
+                        hour: '2.digit',
+                        minute: '2.digit'
+                      })}
                     </td>
                     <td className="px-6 py-4">{getStatusBadge(appointment.status)}</td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1">
                         {loadingId === appointment.id ? (
                           <Loader2 size={18} className="animate-spin text-slate-400" />
                         ) : (
@@ -267,12 +397,19 @@ export default function AdminTable({ initialAppointments, dbError = false }: Adm
                             {appointment.status !== "CANCELLED" && (
                               <button
                                 onClick={() => handleStatusChange(appointment.id, "CANCELLED")}
-                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                                 title="İptal Et"
                               >
                                 <X size={18} />
                               </button>
                             )}
+                            <button
+                              onClick={() => handleDelete(appointment.id)}
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-1"
+                              title="Sil"
+                            >
+                              <Trash2 size={18} />
+                            </button>
                           </>
                         )}
                       </div>

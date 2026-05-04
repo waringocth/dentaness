@@ -31,3 +31,23 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    await prisma.appointment.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true, message: "Randevu silindi" });
+  } catch (error) {
+    console.error("Booking DELETE error:", error);
+    return NextResponse.json(
+      { success: false, message: "Randevu silinirken hata oluştu" },
+      { status: 500 }
+    );
+  }
+}
