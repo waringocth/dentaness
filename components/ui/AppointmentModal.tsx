@@ -118,7 +118,7 @@ export default function AppointmentModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998]"
           />
 
           {/* Modal */}
@@ -127,7 +127,7 @@ export default function AppointmentModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.93, y: 20 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed inset-x-4 top-[50%] -translate-y-[50%] z-[70] max-w-lg mx-auto bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
+            className="fixed inset-x-4 top-[50%] -translate-y-[50%] z-[9999] max-w-lg mx-auto bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
           >
             {/* Header */}
             <div className="bg-teal-gradient px-6 py-5 relative shrink-0">
@@ -252,15 +252,15 @@ export default function AppointmentModal({
                     </label>
                     <select
                       {...register("serviceType")}
-                      className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all appearance-none ${
+                      className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all appearance-none text-slate-900 ${
                         errors.serviceType
                           ? "border-red-300 bg-red-50"
                           : "border-slate-200 bg-slate-50 focus:border-teal-500 focus:bg-white"
                       }`}
                     >
-                      <option value="">Seçiniz...</option>
+                      <option value="" className="text-slate-900">Seçiniz...</option>
                       {serviceOptions.map((opt) => (
-                        <option key={opt} value={opt}>
+                        <option key={opt} value={opt} className="text-slate-900">
                           {opt}
                         </option>
                       ))}
@@ -300,15 +300,15 @@ export default function AppointmentModal({
                       </label>
                       <select
                         {...register("appointmentTime")}
-                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all appearance-none ${
+                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all appearance-none text-slate-900 ${
                           errors.appointmentTime
                             ? "border-red-300 bg-red-50"
                             : "border-slate-200 bg-slate-50 focus:border-teal-500 focus:bg-white"
                         }`}
                       >
-                        <option value="">Seçiniz...</option>
+                        <option value="" className="text-slate-900">Seçiniz...</option>
                         {timeSlots.map((time) => (
-                          <option key={time} value={time}>
+                          <option key={time} value={time} className="text-slate-900">
                             {time}
                           </option>
                         ))}

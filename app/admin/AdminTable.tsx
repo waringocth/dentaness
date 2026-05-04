@@ -22,6 +22,8 @@ export default function AdminTable({ initialAppointments, dbError = false }: Adm
     {
       fallbackData: initialAppointments,
       refreshInterval: 10000,
+      refreshWhenHidden: true,
+      revalidateOnFocus: true,
     }
   );
 
@@ -49,6 +51,22 @@ export default function AdminTable({ initialAppointments, dbError = false }: Adm
             icon: "/favicon.ico",
           });
         }
+
+        // Başlık yanıp sönme efekti
+        const originalTitle = document.title;
+        let isFlash = false;
+        const flashInterval = setInterval(() => {
+          document.title = isFlash ? originalTitle : "!!! YENİ RANDEVU !!!";
+          isFlash = !isFlash;
+        }, 1000);
+
+        // Kullanıcı sayfaya odaklandığında durdur
+        const handleFocus = () => {
+          clearInterval(flashInterval);
+          document.title = originalTitle;
+          window.removeEventListener("focus", handleFocus);
+        };
+        window.addEventListener("focus", handleFocus);
       }
     }
     prevCountRef.current = appointments.length;
