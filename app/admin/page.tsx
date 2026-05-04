@@ -12,6 +12,18 @@ export default async function AdminDashboard() {
   try {
     appointments = await prisma.appointment.findMany({
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        serviceType: true,
+        appointmentDate: true,
+        appointmentTime: true,
+        status: true,
+        notes: true,
+        createdAt: true,
+      },
     });
   } catch (error) {
     console.error("Failed to fetch appointments:", error);
