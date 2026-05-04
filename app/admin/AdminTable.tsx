@@ -371,11 +371,11 @@ export default function AdminTable({ initialAppointments, dbError = false }: Adm
                     </td>
                     <td className="px-6 py-4 text-xs text-slate-500 font-medium">
                       {new Date(appointment.createdAt).toLocaleString("tr-TR", {
-                        day: '2.digit',
-                        month: '2.digit',
+                        day: '2-digit',
+                        month: '2-digit',
                         year: 'numeric',
-                        hour: '2.digit',
-                        minute: '2.digit'
+                        hour: '2-digit',
+                        minute: '2-digit'
                       })}
                     </td>
                     <td className="px-6 py-4">{getStatusBadge(appointment.status)}</td>
