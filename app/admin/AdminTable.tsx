@@ -22,26 +22,37 @@ export default function AdminTable({ initialAppointments }: AdminTableProps) {
   );
 
   const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [audioEnabled, setAudioEnabled] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const prevCountRef = useRef(initialAppointments.length);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     audioRef.current = new Audio("/sounds/notification.mp3");
+    if (typeof window !== "undefined" && Notification.permission === "granted") {
+      setNotificationsEnabled(true);
+    }
   }, []);
 
   useEffect(() => {
     if (appointments.length > prevCountRef.current) {
-      if (audioEnabled && audioRef.current) {
-        audioRef.current.play().catch((e) => console.log("Audio play failed", e));
+      if (notificationsEnabled) {
+        if (audioRef.current) {
+          audioRef.current.play().catch((e) => console.log("Audio play failed", e));
+        }
+        if (Notification.permission === "granted") {
+          new Notification("Yeni Randevu!", {
+            body: "Kliniğe yeni bir randevu talebi geldi. Lütfen paneli kontrol edin.",
+            icon: "/favicon.ico",
+          });
+        }
       }
     }
     prevCountRef.current = appointments.length;
-  }, [appointments, audioEnabled]);
+  }, [appointments, notificationsEnabled]);
 
-  const toggleAudio = () => {
-    if (!audioEnabled && audioRef.current) {
-      // Sessiz çalma ile tarayıcı kilidini aç
+  const requestPermissions = async () => {
+    if (audioRef.current) {
+      // Sessiz çalma ile tarayıcı ses kilidini aç
       audioRef.current.volume = 0;
       audioRef.current.play().then(() => {
         audioRef.current!.pause();
@@ -49,7 +60,15 @@ export default function AdminTable({ initialAppointments }: AdminTableProps) {
         audioRef.current!.volume = 1;
       }).catch(() => {});
     }
-    setAudioEnabled(!audioEnabled);
+
+    if (typeof window !== "undefined") {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        setNotificationsEnabled(true);
+      } else {
+        alert("Bildirim izni reddedildi. Otomatik uyarı alamayacaksınız.");
+      }
+    }
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
@@ -88,15 +107,16 @@ export default function AdminTable({ initialAppointments }: AdminTableProps) {
     <div className="space-y-4">
       <div className="flex justify-end mb-4">
         <button
-          onClick={toggleAudio}
+          onClick={requestPermissions}
+          disabled={notificationsEnabled}
           className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-            audioEnabled 
-              ? "bg-teal-100 text-teal-700 hover:bg-teal-200" 
+            notificationsEnabled 
+              ? "bg-teal-100 text-teal-700 opacity-80 cursor-default" 
               : "bg-slate-100 text-slate-600 hover:bg-slate-200"
           }`}
         >
-          {audioEnabled ? <Bell size={18} /> : <BellOff size={18} />}
-          {audioEnabled ? "Bildirimler Açık" : "🔔 Sesli Bildirimleri Aç"}
+          {notificationsEnabled ? <Bell size={18} /> : <BellOff size={18} />}
+          {notificationsEnabled ? "Bildirimler Açık" : "🔔 Tarayıcı Bildirimlerine İzin Ver"}
         </button>
       </div>
 
