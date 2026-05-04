@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
+import { Appointment } from "@prisma/client";
 import AdminTable from "./AdminTable";
 import { LogOut } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  let appointments = [];
+  let appointments: Appointment[] = [];
   let dbError = false;
 
   try {
