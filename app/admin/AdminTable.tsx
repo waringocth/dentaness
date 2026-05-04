@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { Appointment } from "@prisma/client";
-import { Check, X, Loader2, Bell, BellOff } from "lucide-react";
+import { Check, X, Loader2, Bell, BellOff, Edit2, Save } from "lucide-react";
 import useSWR from "swr";
 
 interface AdminTableProps {
@@ -14,6 +14,65 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json()).then(data 
   if (data.success === false) throw new Error(data.message);
   return data.appointments || [];
 });
+
+function NoteCell({ appointmentId, initialNote }: { appointmentId: string, initialNote: string | null }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [note, setNote] = useState(initialNote || "");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/appointments/${appointmentId}/note`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: note }),
+      });
+      if (res.ok) {
+        setIsEditing(false);
+      } else {
+        alert("Not kaydedilirken bir hata oluştu.");
+      }
+    } catch (error) {
+      alert("Bağlantı hatası.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-2 min-w-[200px]">
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          className="w-full p-2 text-xs border border-slate-200 rounded-lg focus:border-teal-500 outline-none resize-none"
+          rows={2}
+          autoFocus
+        />
+        <button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors disabled:opacity-50"
+        >
+          {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="group flex items-start gap-2 min-w-[200px] cursor-pointer"
+      onClick={() => setIsEditing(true)}
+    >
+      <p className="text-xs text-slate-500 italic max-w-[180px] truncate">
+        {note || "Not ekle..."}
+      </p>
+      <Edit2 size={12} className="text-slate-300 group-hover:text-teal-500 transition-colors mt-0.5" />
+    </div>
+  );
+}
 
 export default function AdminTable({ initialAppointments, dbError = false }: AdminTableProps) {
   const { data: appointments = initialAppointments, mutate } = useSWR<Appointment[]>(
@@ -158,6 +217,7 @@ export default function AdminTable({ initialAppointments, dbError = false }: Adm
                 <th className="px-6 py-4">Telefon</th>
                 <th className="px-6 py-4">İşlem</th>
                 <th className="px-6 py-4">Tarih / Saat</th>
+                <th className="px-6 py-4">Notlar</th>
                 <th className="px-6 py-4">Kayıt Zamanı</th>
                 <th className="px-6 py-4">Durum</th>
                 <th className="px-6 py-4 text-right">İşlem</th>
@@ -181,6 +241,9 @@ export default function AdminTable({ initialAppointments, dbError = false }: Adm
                     <td className="px-6 py-4 font-medium">
                       {appointment.appointmentDate} <br />
                       <span className="text-slate-400 text-xs">{appointment.appointmentTime}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <NoteCell appointmentId={appointment.id} initialNote={appointment.notes} />
                     </td>
                     <td className="px-6 py-4 text-xs text-slate-500">
                       {new Date(appointment.createdAt).toLocaleDateString("tr-TR")}

@@ -45,6 +45,7 @@ const bookingSchema = z.object({
   serviceType: z.string().min(1, "Lütfen bir hizmet seçiniz"),
   appointmentDate: z.string().min(1, "Lütfen bir tarih seçiniz"),
   appointmentTime: z.string().min(1, "Lütfen bir saat seçiniz"),
+  notes: z.string().optional(),
 });
 
 type BookingFormValues = z.infer<typeof bookingSchema>;
@@ -69,6 +70,7 @@ export default function AppointmentModal({
       serviceType: "",
       appointmentDate: "",
       appointmentTime: "",
+      notes: "",
     },
   });
 
@@ -281,7 +283,7 @@ export default function AppointmentModal({
                         type="date"
                         min={today}
                         {...register("appointmentDate")}
-                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${
+                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all text-slate-900 ${
                           errors.appointmentDate
                             ? "border-red-300 bg-red-50"
                             : "border-slate-200 bg-slate-50 focus:border-teal-500 focus:bg-white"
@@ -319,6 +321,18 @@ export default function AppointmentModal({
                         </p>
                       )}
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
+                      Notunuz (Opsiyonel)
+                    </label>
+                    <textarea
+                      {...register("notes")}
+                      placeholder="Eklemek istediğiniz notlar..."
+                      rows={3}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 outline-none focus:border-teal-500 focus:bg-white transition-all resize-none"
+                    />
                   </div>
 
                   <button

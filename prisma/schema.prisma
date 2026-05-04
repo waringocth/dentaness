@@ -19,5 +19,6 @@ model Appointment {
   appointmentDate String
   appointmentTime String
   status          String   @default("PENDING")
+  notes           String?
   createdAt       DateTime @default(now())
 }
