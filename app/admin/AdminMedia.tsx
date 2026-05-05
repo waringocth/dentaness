@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { Loader2, Upload, Trash2, Image as ImageIcon } from "lucide-react";
+import { Loader2, Upload, Trash2, Pencil, X, Image as ImageIcon } from "lucide-react";
 import type { Doctor, SiteMedia } from "@prisma/client";
 
 const fetcher = (url: string) =>
@@ -16,14 +16,40 @@ export default function AdminMedia() {
 
   const [activeTab, setActiveTab] = useState<"doctors" | "media">("doctors");
 
-  // State for new Doctor
-  const [newDoctor, setNewDoctor] = useState({ name: "", specialization: "", bio: "", specialtiesRaw: "", educationRaw: "" });
+  // Shared form state (used for both Add and Edit)
+  const EMPTY_FORM = { name: "", specialization: "", bio: "", specialtiesRaw: "", educationRaw: "" };
+  const [formData, setFormData] = useState(EMPTY_FORM);
   const [doctorFile, setDoctorFile] = useState<File | null>(null);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+
+  // Edit mode state
+  const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
 
   // State for media updates
   const [mediaFiles, setMediaFiles] = useState<Record<string, File>>({});
   const [uploadingMedia, setUploadingMedia] = useState<string | null>(null);
+
+  const isEditing = editingDoctor !== null;
+
+  const handleEditDoctor = (doc: Doctor) => {
+    setEditingDoctor(doc);
+    setFormData({
+      name: doc.name,
+      specialization: doc.specialization,
+      bio: (doc as any).bio ?? "",
+      specialtiesRaw: ((doc as any).specialties as string[] ?? []).join(", "),
+      educationRaw: ((doc as any).education as string[] ?? []).join("\n"),
+    });
+    setDoctorFile(null);
+    // Scroll form into view
+    document.getElementById("doctor-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingDoctor(null);
+    setFormData(EMPTY_FORM);
+    setDoctorFile(null);
+  };
 
   const servicesList = [
     "implant-tedavisi", "estetik-dis-hekimligi", "ortodonti", "cocuk-dis-hekimligi", 
@@ -44,34 +70,51 @@ export default function AdminMedia() {
     ])
   ];
 
-  const handleAddDoctor = async (e: React.FormEvent) => {
+  const handleSubmitDoctor = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDoctor.name || !newDoctor.specialization || !doctorFile) return alert("Tüm alanları doldurun");
-    
+    if (!formData.name || !formData.specialization) return alert("İsim ve unvan alanları zorunludur");
+    // For new doctors a photo is required; for edits it's optional
+    if (!isEditing && !doctorFile) return alert("Yeni doktor için fotoğraf zorunludur");
+
     setIsUploadingDoc(true);
     try {
-      const uploadRes = await fetch(`/api/upload?filename=${encodeURIComponent(doctorFile.name)}`, {
-        method: "POST",
-        body: doctorFile,
-      });
-      if (!uploadRes.ok) throw new Error("Upload failed");
-      const { url } = await uploadRes.json();
+      let imageUrl = isEditing ? editingDoctor!.imageUrl : "";
 
-      await fetch("/api/doctors", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: newDoctor.name,
-          specialization: newDoctor.specialization,
-          imageUrl: url,
-          bio: newDoctor.bio,
-          specialties: newDoctor.specialtiesRaw.split(",").map(s => s.trim()).filter(Boolean),
-          education: newDoctor.educationRaw.split("\n").map(s => s.trim()).filter(Boolean),
-        })
-      });
-      
-      setNewDoctor({ name: "", specialization: "", bio: "", specialtiesRaw: "", educationRaw: "" });
-      setDoctorFile(null);
+      // Upload new photo if provided
+      if (doctorFile) {
+        const uploadRes = await fetch(`/api/upload?filename=${encodeURIComponent(doctorFile.name)}`, {
+          method: "POST",
+          body: doctorFile,
+        });
+        if (!uploadRes.ok) throw new Error("Upload failed");
+        const json = await uploadRes.json();
+        imageUrl = json.url;
+      }
+
+      const payload = {
+        name: formData.name,
+        specialization: formData.specialization,
+        imageUrl,
+        bio: formData.bio,
+        specialties: formData.specialtiesRaw.split(",").map(s => s.trim()).filter(Boolean),
+        education: formData.educationRaw.split("\n").map(s => s.trim()).filter(Boolean),
+      };
+
+      if (isEditing) {
+        await fetch(`/api/doctors/${editingDoctor!.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await fetch("/api/doctors", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      handleCancelEdit();
       mutateDoctors();
     } catch (error) {
       alert("Hata oluştu");
@@ -142,36 +185,56 @@ export default function AdminMedia() {
       <div className="p-6">
         {activeTab === "doctors" && (
           <div className="space-y-8">
-            <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-              <h3 className="font-bold text-slate-800 mb-4">Yeni Doktor Ekle</h3>
-              <form onSubmit={handleAddDoctor} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div id="doctor-form" className={`p-6 rounded-xl border-2 transition-colors ${isEditing ? "bg-amber-50 border-amber-300" : "bg-slate-50 border-slate-200"}`}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-slate-800">
+                  {isEditing ? `Düzenle: ${editingDoctor!.name}` : "Yeni Doktor Ekle"}
+                </h3>
+                {isEditing && (
+                  <button type="button" onClick={handleCancelEdit} className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 border border-slate-300 rounded-lg px-3 py-1.5 hover:bg-slate-100 transition-colors">
+                    <X size={14} /> İptal
+                  </button>
+                )}
+              </div>
+              <form onSubmit={handleSubmitDoctor} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">İsim Soyisim</label>
-                  <input type="text" value={newDoctor.name} onChange={e => setNewDoctor({...newDoctor, name: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-teal-500 text-sm" required />
+                  <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-teal-500 text-sm" required />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Unvan / Uzmanlık</label>
-                  <input type="text" value={newDoctor.specialization} onChange={e => setNewDoctor({...newDoctor, specialization: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-teal-500 text-sm" required />
+                  <input type="text" value={formData.specialization} onChange={e => setFormData({...formData, specialization: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-teal-500 text-sm" required />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Fotoğraf</label>
-                  <input type="file" accept="image/*" onChange={e => setDoctorFile(e.target.files?.[0] || null)} className="w-full p-1.5 border border-slate-200 rounded-lg bg-white text-sm" required />
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    Fotoğraf {isEditing && <span className="font-normal text-slate-400">(boş bırakılırsa mevcut fotoğraf korunur)</span>}
+                  </label>
+                  {isEditing && editingDoctor?.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={editingDoctor.imageUrl} alt="Mevcut" className="w-16 h-16 rounded-lg object-cover mb-2 border border-slate-200" />
+                  )}
+                  <input type="file" accept="image/*" onChange={e => setDoctorFile(e.target.files?.[0] || null)} className="w-full p-1.5 border border-slate-200 rounded-lg bg-white text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Uzmanlık Alanları <span className="font-normal text-slate-400">(virgülle ayırın)</span></label>
-                  <input type="text" placeholder="İmplant, Ortodonti, Estetik..." value={newDoctor.specialtiesRaw} onChange={e => setNewDoctor({...newDoctor, specialtiesRaw: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-teal-500 text-sm" />
+                  <input type="text" placeholder="İmplant, Ortodonti, Estetik..." value={formData.specialtiesRaw} onChange={e => setFormData({...formData, specialtiesRaw: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-teal-500 text-sm" />
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-xs font-bold text-slate-500 mb-1">Hakkında (Bio)</label>
-                  <textarea rows={3} value={newDoctor.bio} onChange={e => setNewDoctor({...newDoctor, bio: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-teal-500 text-sm resize-none" placeholder="Doktor hakkında kısa bir biyografi yazın..." />
+                  <textarea rows={4} value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-teal-500 text-sm resize-none" placeholder="Doktor hakkında kısa bir biyografi yazın..." />
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-xs font-bold text-slate-500 mb-1">Eğitim <span className="font-normal text-slate-400">(her satır bir madde)</span></label>
-                  <textarea rows={3} value={newDoctor.educationRaw} onChange={e => setNewDoctor({...newDoctor, educationRaw: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-teal-500 text-sm resize-none" placeholder="Üniversite Adı (Yıl)&#10;Sertifika Programı&#10;Birlik Üyeliği..." />
+                  <textarea rows={3} value={formData.educationRaw} onChange={e => setFormData({...formData, educationRaw: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-teal-500 text-sm resize-none" placeholder="Üniversite Adı (Yıl)&#10;Sertifika Programı&#10;Birlik Üyeliği..." />
                 </div>
-                <div className="md:col-span-2 flex justify-end">
-                  <button type="submit" disabled={isUploadingDoc} className="px-6 py-2.5 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50 text-sm flex items-center gap-2">
-                    {isUploadingDoc ? <Loader2 className="animate-spin" size={20} /> : "Doktor Ekle"}
+                <div className="md:col-span-2 flex justify-end gap-3">
+                  {isEditing && (
+                    <button type="button" onClick={handleCancelEdit} className="px-6 py-2.5 border border-slate-300 text-slate-600 font-bold rounded-lg hover:bg-slate-50 text-sm">
+                      İptal
+                    </button>
+                  )}
+                  <button type="submit" disabled={isUploadingDoc} className={`px-6 py-2.5 font-bold rounded-lg disabled:opacity-50 text-sm flex items-center gap-2 text-white ${isEditing ? "bg-amber-500 hover:bg-amber-600" : "bg-teal-600 hover:bg-teal-700"}`}>
+                    {isUploadingDoc ? <Loader2 className="animate-spin" size={20} /> : isEditing ? "Değişiklikleri Kaydet" : "Doktor Ekle"}
                   </button>
                 </div>
               </form>
@@ -179,7 +242,7 @@ export default function AdminMedia() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.isArray(doctors) && doctors.map(doc => (
-                <div key={doc.id} className="border border-slate-200 rounded-xl overflow-hidden relative group bg-white">
+                <div key={doc.id} className={`border-2 rounded-xl overflow-hidden bg-white transition-colors ${editingDoctor?.id === doc.id ? "border-amber-400 shadow-amber-100 shadow-md" : "border-slate-200"}`}>
                   <div className="flex gap-4 p-4">
                     <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0 bg-slate-100">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -198,9 +261,21 @@ export default function AdminMedia() {
                       </div>
                     </div>
                   </div>
-                  <button onClick={() => handleDeleteDoctor(doc.id)} className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
-                    <Trash2 size={14} />
-                  </button>
+                  <div className="flex border-t border-slate-100">
+                    <button
+                      onClick={() => handleEditDoctor(doc)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-amber-600 hover:bg-amber-50 transition-colors"
+                    >
+                      <Pencil size={13} /> Düzenle
+                    </button>
+                    <div className="w-px bg-slate-100" />
+                    <button
+                      onClick={() => handleDeleteDoctor(doc.id)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 size={13} /> Sil
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
