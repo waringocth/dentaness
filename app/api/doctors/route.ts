@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 
 export async function GET() {
@@ -14,6 +15,10 @@ export async function POST(req: Request) {
   try {
     const data = await req.json();
     const doctor = await prisma.doctor.create({ data });
+
+    // Revalidate the public doctors page immediately
+    revalidatePath('/doktorlarimiz');
+
     return NextResponse.json(doctor);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to create doctor' }, { status: 500 });

@@ -23,17 +23,19 @@ export async function POST(request: Request): Promise<NextResponse> {
       .webp({ quality: 80 })
       .toBuffer();
 
-    // Replace original extension with .webp
-    const webpFilename = filename.replace(/\.[^/.]+$/, "") + ".webp";
+    // Prepend timestamp to guarantee uniqueness — prevents Blob collision on same filename
+    const baseName = filename.replace(/\.[^/.]+$/, "");
+    const uniqueFilename = `${Date.now()}-${baseName}.webp`;
 
-    const blob = await put(webpFilename, optimizedBuffer, {
+    const blob = await put(uniqueFilename, optimizedBuffer, {
       access: 'public',
+      addRandomSuffix: true,   // double safety: Vercel adds its own suffix too
       contentType: 'image/webp',
     });
 
     return NextResponse.json(blob);
   } catch (error) {
     console.error("Upload error:", error);
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Upload failed', details: String(error) }, { status: 500 });
   }
 }
