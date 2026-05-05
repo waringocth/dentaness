@@ -10,82 +10,48 @@ export const metadata: Metadata = {
     "Dentaness Bahçeşehir uzman diş hekimleri — Dt. Birol Karabulut ve Dt. Ece Özoğul. Eğitim ve uzmanlık alanları hakkında bilgi alın.",
 };
 
-const doctors = [
+const FALLBACK_DOCTORS = [
   {
     name: "Dt. Ece Özoğul",
-    title: "Diş Hekimi",
-    imageUrl:
-      "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=600&q=80",
+    specialization: "Diş Hekimi",
+    imageUrl: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=600&q=80",
     bio: `İstanbul doğumlu olan Dt. Ece Özoğul, eğitim hayatına Bahçeşehir Koleji'nde başlayıp, Özel Bahçeşehir Anadolu Lisesi'nden 2019 yılında mezun olduktan sonra, Bahçeşehir Üniversitesi Diş Hekimliği Fakültesi'nde eğitimini tamamlayarak 2024 yılında mezun olmuştur.
 
 2022-2024 yılları arasında Bahçeşehir Üniversitesi'nde stajyer hekim olarak görev almış ve klinik deneyim kazanmıştır. Staj döneminde, diş muayeneleri, tedavi planlaması ve çeşitli diş hekimliği prosedürlerine aktif olarak katılmıştır.`,
-    specialties: [
-      "Estetik Diş Hekimliği",
-      "Restoratif Diş Hekimliği",
-      "Çocuk Diş Hekimliği",
-      "Ağız Sağlığı Koruma",
-    ],
-    education: [
-      "Bahçeşehir Koleji - Özel Bahçeşehir Anadolu Lisesi (2019)",
-      "Bahçeşehir Üniversitesi Diş Hekimliği Fakültesi (2024)",
-      "Klinik Staj - Bahçeşehir Üniversitesi (2022-2024)",
-    ],
+    specialties: ["Estetik Diş Hekimliği", "Restoratif Diş Hekimliği", "Çocuk Diş Hekimliği", "Ağız Sağlığı Koruma"],
+    education: ["Bahçeşehir Koleji - Özel Bahçeşehir Anadolu Lisesi (2019)", "Bahçeşehir Üniversitesi Diş Hekimliği Fakültesi (2024)", "Klinik Staj - Bahçeşehir Üniversitesi (2022-2024)"],
   },
   {
     name: "Dt. Birol Karabulut",
-    title: "Diş Hekimi",
-    imageUrl:
-      "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=600&q=80",
+    specialization: "Diş Hekimi",
+    imageUrl: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=600&q=80",
     bio: `Deneyimli diş hekimimiz Dt. Birol Karabulut, implant tedavisi ve ağız-çene cerrahisi konularında uzmanlaşmış olup yıllarca Türkiye'nin önde gelen kliniklerinde görev yapmıştır.
 
 Hasta memnuniyetini her zaman ön planda tutan Dt. Karabulut, Dentaness Bahçeşehir'de modern teknoloji ve kanıta dayalı tedavi yöntemleriyle hastalarına en yüksek kalitede hizmet sunmaktadır.`,
-    specialties: [
-      "İmplant Tedavisi",
-      "Ağız Çene Cerrahisi",
-      "Ortodonti",
-      "Bruksizm Tedavisi",
-    ],
-    education: [
-      "Diş Hekimliği Fakültesi Mezunu",
-      "İmplantoloji Sertifika Programları",
-      "Türk Diş Hekimleri Birliği Üyesi",
-    ],
+    specialties: ["İmplant Tedavisi", "Ağız Çene Cerrahisi", "Ortodonti", "Bruksizm Tedavisi"],
+    education: ["Diş Hekimliği Fakültesi Mezunu", "İmplantoloji Sertifika Programları", "Türk Diş Hekimleri Birliği Üyesi"],
   },
 ];
-
-const defaultStaticData: Record<string, any> = {
-  "Dt. Ece Özoğul": doctors[0],
-  "Dt. Birol Karabulut": doctors[1]
-};
-
-const genericStaticData = {
-  bio: "Dentaness Bahçeşehir'de modern teknoloji ve kanıta dayalı tedavi yöntemleriyle hastalarımıza en yüksek kalitede hizmet sunmaktadır.\n\nHasta memnuniyetini ve sağlığını her zaman ön planda tutarak klinik çalışmalarına devam etmektedir.",
-  specialties: ["Genel Diş Hekimliği", "Estetik Uygulamalar", "Ağız Sağlığı Koruma", "Koruyucu Diş Hekimliği"],
-  education: ["Diş Hekimliği Fakültesi Mezunu", "Mesleki Gelişim ve Sertifika Programları", "Türk Diş Hekimleri Birliği Üyesi"]
-};
 
 export const dynamic = "force-dynamic";
 
 export default async function DoktorlarimizPage() {
-  let displayDoctors = doctors;
+  let displayDoctors: typeof FALLBACK_DOCTORS = FALLBACK_DOCTORS;
 
   try {
     const dbDoctors = await prisma.doctor.findMany({ orderBy: { createdAt: "asc" } });
     if (dbDoctors.length > 0) {
-      displayDoctors = dbDoctors.map(doc => {
-        const staticData = defaultStaticData[doc.name] || genericStaticData;
-        return {
-          name: doc.name,
-          title: doc.specialization,
-          imageUrl: doc.imageUrl || staticData.imageUrl || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=600&q=80",
-          bio: staticData.bio,
-          specialties: staticData.specialties,
-          education: staticData.education
-        };
-      });
+      displayDoctors = dbDoctors.map(doc => ({
+        name: doc.name,
+        specialization: doc.specialization,
+        imageUrl: doc.imageUrl,
+        bio: doc.bio,
+        specialties: doc.specialties,
+        education: doc.education,
+      }));
     }
   } catch (error) {
-    console.error("Failed to fetch doctors:", error);
+    console.error("Failed to fetch doctors, using fallback:", error);
   }
 
   return (
@@ -129,7 +95,7 @@ export default async function DoktorlarimizPage() {
                     />
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">
                       <p className="text-white font-bold text-xl">{doc.name}</p>
-                      <p className="text-teal-300 text-sm">{doc.title}</p>
+                      <p className="text-teal-300 text-sm">{doc.specialization}</p>
                     </div>
                   </div>
                 </div>
@@ -137,7 +103,7 @@ export default async function DoktorlarimizPage() {
                 {/* Info */}
                 <div className={i % 2 === 1 ? "lg:order-1" : ""}>
                   <span className="inline-block px-4 py-1.5 bg-teal-50 text-teal-700 text-xs font-bold uppercase tracking-wider rounded-full mb-4">
-                    {doc.title}
+                    {doc.specialization}
                   </span>
                   <h2 className="text-3xl font-extrabold text-slate-800 mb-6">
                     {doc.name}

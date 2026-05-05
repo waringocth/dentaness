@@ -17,7 +17,7 @@ export default function AdminMedia() {
   const [activeTab, setActiveTab] = useState<"doctors" | "media">("doctors");
 
   // State for new Doctor
-  const [newDoctor, setNewDoctor] = useState({ name: "", specialization: "" });
+  const [newDoctor, setNewDoctor] = useState({ name: "", specialization: "", bio: "", specialtiesRaw: "", educationRaw: "" });
   const [doctorFile, setDoctorFile] = useState<File | null>(null);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
 
@@ -60,10 +60,17 @@ export default function AdminMedia() {
       await fetch("/api/doctors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...newDoctor, imageUrl: url })
+        body: JSON.stringify({
+          name: newDoctor.name,
+          specialization: newDoctor.specialization,
+          imageUrl: url,
+          bio: newDoctor.bio,
+          specialties: newDoctor.specialtiesRaw.split(",").map(s => s.trim()).filter(Boolean),
+          education: newDoctor.educationRaw.split("\n").map(s => s.trim()).filter(Boolean),
+        })
       });
       
-      setNewDoctor({ name: "", specialization: "" });
+      setNewDoctor({ name: "", specialization: "", bio: "", specialtiesRaw: "", educationRaw: "" });
       setDoctorFile(null);
       mutateDoctors();
     } catch (error) {
@@ -137,38 +144,62 @@ export default function AdminMedia() {
           <div className="space-y-8">
             <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
               <h3 className="font-bold text-slate-800 mb-4">Yeni Doktor Ekle</h3>
-              <form onSubmit={handleAddDoctor} className="flex flex-col md:flex-row gap-4 items-end">
-                <div className="flex-1">
+              <form onSubmit={handleAddDoctor} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">İsim Soyisim</label>
                   <input type="text" value={newDoctor.name} onChange={e => setNewDoctor({...newDoctor, name: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-teal-500 text-sm" required />
                 </div>
-                <div className="flex-1">
+                <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Unvan / Uzmanlık</label>
                   <input type="text" value={newDoctor.specialization} onChange={e => setNewDoctor({...newDoctor, specialization: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-teal-500 text-sm" required />
                 </div>
-                <div className="flex-1">
+                <div>
                   <label className="block text-xs font-bold text-slate-500 mb-1">Fotoğraf</label>
                   <input type="file" accept="image/*" onChange={e => setDoctorFile(e.target.files?.[0] || null)} className="w-full p-1.5 border border-slate-200 rounded-lg bg-white text-sm" required />
                 </div>
-                <button type="submit" disabled={isUploadingDoc} className="px-6 py-2.5 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50 text-sm">
-                  {isUploadingDoc ? <Loader2 className="animate-spin" size={20} /> : "Ekle"}
-                </button>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Uzmanlık Alanları <span className="font-normal text-slate-400">(virgülle ayırın)</span></label>
+                  <input type="text" placeholder="İmplant, Ortodonti, Estetik..." value={newDoctor.specialtiesRaw} onChange={e => setNewDoctor({...newDoctor, specialtiesRaw: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-teal-500 text-sm" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Hakkında (Bio)</label>
+                  <textarea rows={3} value={newDoctor.bio} onChange={e => setNewDoctor({...newDoctor, bio: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-teal-500 text-sm resize-none" placeholder="Doktor hakkında kısa bir biyografi yazın..." />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Eğitim <span className="font-normal text-slate-400">(her satır bir madde)</span></label>
+                  <textarea rows={3} value={newDoctor.educationRaw} onChange={e => setNewDoctor({...newDoctor, educationRaw: e.target.value})} className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-teal-500 text-sm resize-none" placeholder="Üniversite Adı (Yıl)&#10;Sertifika Programı&#10;Birlik Üyeliği..." />
+                </div>
+                <div className="md:col-span-2 flex justify-end">
+                  <button type="submit" disabled={isUploadingDoc} className="px-6 py-2.5 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700 disabled:opacity-50 text-sm flex items-center gap-2">
+                    {isUploadingDoc ? <Loader2 className="animate-spin" size={20} /> : "Doktor Ekle"}
+                  </button>
+                </div>
               </form>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.isArray(doctors) && doctors.map(doc => (
-                <div key={doc.id} className="border border-slate-200 rounded-xl overflow-hidden relative group">
-                  <div className="aspect-[3/4] relative bg-slate-100">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={doc.imageUrl} alt={doc.name} className="w-full h-full object-cover" />
+                <div key={doc.id} className="border border-slate-200 rounded-xl overflow-hidden relative group bg-white">
+                  <div className="flex gap-4 p-4">
+                    <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0 bg-slate-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={doc.imageUrl} alt={doc.name} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-slate-800 text-sm">{doc.name}</p>
+                      <p className="text-xs text-teal-600 font-medium mb-2">{doc.specialization}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {(doc as any).specialties?.slice(0, 2).map((s: string) => (
+                          <span key={s} className="px-2 py-0.5 bg-teal-50 text-teal-700 text-xs rounded-full">{s}</span>
+                        ))}
+                        {(doc as any).specialties?.length > 2 && (
+                          <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs rounded-full">+{(doc as any).specialties.length - 2}</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-4 bg-white border-t border-slate-200">
-                    <p className="font-bold text-slate-800 text-sm">{doc.name}</p>
-                    <p className="text-xs text-teal-600 font-medium">{doc.specialization}</p>
-                  </div>
-                  <button onClick={() => handleDeleteDoctor(doc.id)} className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
-                    <Trash2 size={16} />
+                  <button onClick={() => handleDeleteDoctor(doc.id)} className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                    <Trash2 size={14} />
                   </button>
                 </div>
               ))}
