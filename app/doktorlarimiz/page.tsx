@@ -92,6 +92,7 @@ export default async function DoktorlarimizPage() {
                       alt={doc.name}
                       fill
                       className="object-cover"
+                      unoptimized={doc.imageUrl.startsWith("http")}
                     />
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">
                       <p className="text-white font-bold text-xl">{doc.name}</p>
