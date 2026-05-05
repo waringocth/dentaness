@@ -6,6 +6,9 @@ import { services, getServiceBySlug } from "@/lib/services-data";
 import { CheckCircle2, Phone, MessageCircle, Calendar, ArrowLeft } from "lucide-react";
 import AppointmentCTA from "@/components/ui/AppointmentCTA";
 import BeforeAfterSlider from "@/components/ui/BeforeAfterSlider";
+import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -32,6 +35,22 @@ export default async function ServicePage({ params }: Props) {
 
   const otherServices = services.filter((s) => s.slug !== service.slug).slice(0, 4);
 
+  let heroImage = service.imageUrl;
+  let beforeImage = "https://images.unsplash.com/photo-1598256989800-fea5c5ce870b?q=80&w=800&auto=format&fit=crop";
+  let afterImage = "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?q=80&w=800&auto=format&fit=crop";
+
+  try {
+    const siteMedia = await prisma.siteMedia.findMany({
+      where: { sectionKey: { in: [`hero_${slug}`, `before_${slug}`, `after_${slug}`] } }
+    });
+    const mediaMap = Object.fromEntries(siteMedia.map(m => [m.sectionKey, m.imageUrl]));
+    if (mediaMap[`hero_${slug}`]) heroImage = mediaMap[`hero_${slug}`];
+    if (mediaMap[`before_${slug}`]) beforeImage = mediaMap[`before_${slug}`];
+    if (mediaMap[`after_${slug}`]) afterImage = mediaMap[`after_${slug}`];
+  } catch (error) {
+    console.error("Failed to fetch service media:", error);
+  }
+
   return (
     <>
       {/* Hero */}
@@ -43,7 +62,7 @@ export default async function ServicePage({ params }: Props) {
         </div>
         <div className="absolute inset-0">
           <Image
-            src={service.imageUrl}
+            src={heroImage}
             alt={service.title}
             fill
             className="object-cover opacity-20"
@@ -82,8 +101,8 @@ export default async function ServicePage({ params }: Props) {
             <div className="w-full lg:w-2/3 order-2 lg:order-1">
               {/* 3D Overlapping Before/After Slider */}
               <BeforeAfterSlider
-                beforeImage="https://images.unsplash.com/photo-1598256989800-fea5c5ce870b?q=80&w=800&auto=format&fit=crop"
-                afterImage="https://images.unsplash.com/photo-1606811841689-23dfddce3e95?q=80&w=800&auto=format&fit=crop"
+                beforeImage={beforeImage}
+                afterImage={afterImage}
                 className="mb-10 shadow-2xl ring-4 ring-white mt-0 lg:-mt-32 z-30 rounded-2xl"
               />
 

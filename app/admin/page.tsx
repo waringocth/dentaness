@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Appointment } from "@prisma/client";
-import AdminTable from "./AdminTable";
+import AdminWrapper from "./AdminWrapper";
 import { LogOut } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +48,7 @@ export default async function AdminDashboard() {
       </header>
       
       <main className="max-w-7xl mx-auto p-8">
-        <AdminTable initialAppointments={appointments} dbError={dbError} />
+        <AdminWrapper initialAppointments={appointments} dbError={dbError} />
       </main>
     </div>
   );

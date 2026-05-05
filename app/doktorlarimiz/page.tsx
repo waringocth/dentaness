@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { GraduationCap, Stethoscope } from "lucide-react";
+import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "Doktorlarımız | Dentaness Diş Kliniği Bahçeşehir",
@@ -52,7 +53,41 @@ Hasta memnuniyetini her zaman ön planda tutan Dt. Karabulut, Dentaness Bahçeş
   },
 ];
 
-export default function DoktorlarimizPage() {
+const defaultStaticData: Record<string, any> = {
+  "Dt. Ece Özoğul": doctors[0],
+  "Dt. Birol Karabulut": doctors[1]
+};
+
+const genericStaticData = {
+  bio: "Dentaness Bahçeşehir'de modern teknoloji ve kanıta dayalı tedavi yöntemleriyle hastalarımıza en yüksek kalitede hizmet sunmaktadır.\n\nHasta memnuniyetini ve sağlığını her zaman ön planda tutarak klinik çalışmalarına devam etmektedir.",
+  specialties: ["Genel Diş Hekimliği", "Estetik Uygulamalar", "Ağız Sağlığı Koruma", "Koruyucu Diş Hekimliği"],
+  education: ["Diş Hekimliği Fakültesi Mezunu", "Mesleki Gelişim ve Sertifika Programları", "Türk Diş Hekimleri Birliği Üyesi"]
+};
+
+export const dynamic = "force-dynamic";
+
+export default async function DoktorlarimizPage() {
+  let displayDoctors = doctors;
+
+  try {
+    const dbDoctors = await prisma.doctor.findMany({ orderBy: { createdAt: "asc" } });
+    if (dbDoctors.length > 0) {
+      displayDoctors = dbDoctors.map(doc => {
+        const staticData = defaultStaticData[doc.name] || genericStaticData;
+        return {
+          name: doc.name,
+          title: doc.specialization,
+          imageUrl: doc.imageUrl || staticData.imageUrl || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=600&q=80",
+          bio: staticData.bio,
+          specialties: staticData.specialties,
+          education: staticData.education
+        };
+      });
+    }
+  } catch (error) {
+    console.error("Failed to fetch doctors:", error);
+  }
+
   return (
     <>
       {/* Hero */}
@@ -76,7 +111,7 @@ export default function DoktorlarimizPage() {
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4">
           <div className="space-y-20">
-            {doctors.map((doc, i) => (
+            {displayDoctors.map((doc, i) => (
               <div
                 key={doc.name}
                 className={`grid grid-cols-1 lg:grid-cols-2 gap-12 items-start ${

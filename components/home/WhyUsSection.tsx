@@ -97,7 +97,11 @@ const tabs = [
   },
 ];
 
-export default function WhyUsSection() {
+interface WhyUsProps {
+  mediaMap?: Record<string, string>;
+}
+
+export default function WhyUsSection({ mediaMap = {} }: WhyUsProps) {
   const [activeTab, setActiveTab] = useState(tabs[0].id);
   const active = tabs.find((t) => t.id === activeTab)!;
 
@@ -173,7 +177,7 @@ export default function WhyUsSection() {
             {/* Image */}
             <div className="relative rounded-2xl overflow-hidden aspect-[4/3] shadow-lg">
               <Image
-                src={active.imageUrl}
+                src={mediaMap[`why_us_${active.id}`] || active.imageUrl}
                 alt={active.heading}
                 fill
                 className="object-cover"

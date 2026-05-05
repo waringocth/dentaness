@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import HeroSection from "@/components/home/HeroSection";
 import ServicesSection from "@/components/home/ServicesSection";
 import AboutSection from "@/components/home/AboutSection";
+import { prisma } from "@/lib/prisma";
 
 // Below-the-fold sections — dynamic import for code-splitting (deferred JS parsing)
 const WhyUsSection = dynamic(() => import("@/components/home/WhyUsSection"));
@@ -17,13 +18,23 @@ export const metadata: Metadata = {
     "Dentaness Bahçeşehir — uzman diş hekimleri, son teknoloji ekipmanlar. İmplant, ortodonti, Hollywood Smile, estetik diş hekimliği. Hemen randevu alın: (0501) 107 02 10",
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  let mediaMap: Record<string, string> = {};
+  try {
+    const siteMedia = await prisma.siteMedia.findMany({ 
+      where: { sectionKey: { startsWith: 'why_us_' } } 
+    });
+    mediaMap = Object.fromEntries(siteMedia.map(m => [m.sectionKey, m.imageUrl]));
+  } catch (error) {
+    console.error("Failed to fetch why_us media:", error);
+  }
+
   return (
     <>
       <HeroSection />
       <ServicesSection />
       <AboutSection />
-      <WhyUsSection />
+      <WhyUsSection mediaMap={mediaMap} />
       <TestimonialsSection />
       <GalleryPreviewSection />
       <CTABannerSection />
