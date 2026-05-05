@@ -111,14 +111,14 @@ export default function AppointmentModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <div className="fixed inset-0 z-[9990] flex items-center justify-center pointer-events-none px-4">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998]"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto"
           />
 
           {/* Modal */}
@@ -127,7 +127,7 @@ export default function AppointmentModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.93, y: 20 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed inset-x-4 top-[50%] -translate-y-[50%] z-[9999] max-w-lg mx-auto bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
+            className="relative z-[9999] w-full max-w-lg mx-auto bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] pointer-events-auto"
           >
             {/* Header */}
             <div className="bg-teal-gradient px-6 py-5 relative shrink-0">
@@ -352,7 +352,7 @@ export default function AppointmentModal({
               )}
             </div>
           </motion.div>
-        </>
+        </div>
       )}
     </AnimatePresence>
   );

@@ -69,7 +69,7 @@ export default async function ServicePage({ params }: Props) {
       </section>
 
       {/* Content */}
-      <section className="py-16 md:py-24 bg-white">
+      <section className="relative z-20 py-16 md:py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             {/* Main Content */}
