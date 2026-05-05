@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { Appointment } from "@prisma/client";
-import { Check, X, Loader2, Bell, BellOff, Edit2, Save, Trash2, Download, MessageCircle, Search } from "lucide-react";
+import { Check, X, Loader2, Bell, BellOff, Edit2, Save, Trash2, Download, MessageCircle, Search, Calendar as CalendarIcon, CalendarDays, List, ChevronLeft, ChevronRight, Phone } from "lucide-react";
 import useSWR from "swr";
 
 interface AdminTableProps {
@@ -91,6 +91,42 @@ export default function AdminTable({ initialAppointments, dbError = false }: Adm
   const [searchTerm, setSearchTerm] = useState("");
   const prevCountRef = useRef(initialAppointments.length);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Calendar View State
+  const [view, setView] = useState<"list" | "calendar">("list");
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+
+  const formatYYYYMMDD = (d: Date) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    let startingDayOfWeek = firstDay.getDay() - 1;
+    if (startingDayOfWeek === -1) startingDayOfWeek = 6;
+
+    const days = [];
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(new Date(year, month, i));
+    }
+    return days;
+  };
+
+  const nextMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  const prevMonth = () => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+
+  const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
   // CRM İstatistikleri
   const stats = {
@@ -307,6 +343,27 @@ export default function AdminTable({ initialAppointments, dbError = false }: Adm
         </div>
       </div>
 
+      <div className="flex border-b border-slate-200 mb-6">
+        <button
+          onClick={() => setView("list")}
+          className={`flex items-center gap-2 px-6 py-3 font-medium text-sm transition-colors border-b-2 ${
+            view === "list" ? "border-teal-600 text-teal-600" : "border-transparent text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          <List size={18} />
+          Liste Görünümü
+        </button>
+        <button
+          onClick={() => setView("calendar")}
+          className={`flex items-center gap-2 px-6 py-3 font-medium text-sm transition-colors border-b-2 ${
+            view === "calendar" ? "border-teal-600 text-teal-600" : "border-transparent text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          <CalendarDays size={18} />
+          Takvim Görünümü
+        </button>
+      </div>
+
       {dbError && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm font-medium flex items-center gap-2">
           <X size={18} />
@@ -314,6 +371,7 @@ export default function AdminTable({ initialAppointments, dbError = false }: Adm
         </div>
       )}
 
+      {view === "list" ? (
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-600">
@@ -421,6 +479,124 @@ export default function AdminTable({ initialAppointments, dbError = false }: Adm
           </table>
         </div>
       </div>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-slate-800">
+              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+            </h2>
+            <div className="flex items-center gap-2">
+              <button onClick={prevMonth} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                <ChevronLeft size={20} />
+              </button>
+              <button onClick={() => setCurrentMonth(new Date())} className="px-4 py-2 text-sm font-medium hover:bg-slate-100 rounded-lg transition-colors border border-slate-200">
+                Bugün
+              </button>
+              <button onClick={nextMonth} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-xl overflow-hidden">
+            {["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"].map(day => (
+              <div key={day} className="bg-slate-50 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">
+                {day}
+              </div>
+            ))}
+            
+            {getDaysInMonth(currentMonth).map((day, i) => {
+              const dayAppointments = day ? filteredAppointments.filter(a => a.appointmentDate === formatYYYYMMDD(day)) : [];
+              const isToday = day && formatYYYYMMDD(day) === formatYYYYMMDD(new Date());
+              
+              return (
+                <div key={i} className={`min-h-[120px] bg-white p-2 transition-colors ${day ? "hover:bg-slate-50" : ""}`}>
+                  {day && (
+                    <>
+                      <div className={`text-right text-sm font-medium mb-2 ${isToday ? "text-teal-600 font-bold" : "text-slate-400"}`}>
+                        {isToday ? <span className="bg-teal-100 w-7 h-7 inline-flex items-center justify-center rounded-full">{day.getDate()}</span> : day.getDate()}
+                      </div>
+                      <div className="space-y-1">
+                        {dayAppointments.map(app => (
+                          <div 
+                            key={app.id} 
+                            onClick={() => setSelectedAppointment(app)}
+                            className={`text-xs p-1.5 rounded border cursor-pointer truncate ${
+                              app.status === "APPROVED" ? "bg-green-50 border-green-200 text-green-700" :
+                              app.status === "CANCELLED" ? "bg-red-50 border-red-200 text-red-700" :
+                              "bg-yellow-50 border-yellow-200 text-yellow-700"
+                            }`}
+                            title={`${app.appointmentTime} - ${app.firstName} ${app.lastName}`}
+                          >
+                            <span className="font-bold">{app.appointmentTime}</span> {app.firstName}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Appointment Detail Modal */}
+      {selectedAppointment && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedAppointment(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+              <h3 className="text-lg font-bold text-slate-800">Randevu Detayı</h3>
+              <button onClick={() => setSelectedAppointment(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-500">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 overflow-y-auto">
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Hasta Bilgileri</p>
+                <p className="font-semibold text-slate-800 text-lg">{selectedAppointment.firstName} {selectedAppointment.lastName}</p>
+                <a href={`tel:${selectedAppointment.phone}`} className="text-teal-600 hover:underline flex items-center gap-2 mt-1 font-medium">
+                  <Phone size={16} /> {selectedAppointment.phone}
+                </a>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Tarih</p>
+                  <p className="font-medium text-slate-700">{selectedAppointment.appointmentDate}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Saat</p>
+                  <p className="font-medium text-slate-700">{selectedAppointment.appointmentTime}</p>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">İşlem Türü</p>
+                <p className="font-medium text-slate-700">{selectedAppointment.serviceType}</p>
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Durum</p>
+                <div className="mt-1">{getStatusBadge(selectedAppointment.status)}</div>
+              </div>
+
+              {selectedAppointment.notes && (
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Notlar</p>
+                  <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100">{selectedAppointment.notes}</p>
+                </div>
+              )}
+            </div>
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-2 justify-end shrink-0">
+              <button onClick={() => setSelectedAppointment(null)} className="px-5 py-2 font-semibold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
